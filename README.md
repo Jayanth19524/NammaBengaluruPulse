@@ -3,7 +3,10 @@
 Your City, Watching Out for You. A personal urban infrastructure monitor for Bengaluru: agents watch the roads,
 rainfall and terrain around your routes and tell you before you are affected.
 
-![Live architecture, FloodLens first](docs/architecture.png)
+![Live architecture, FloodLens first](docs/architecture_animated.gif)
+
+Animated architecture: [docs/architecture_animated.mp4](docs/architecture_animated.mp4), rendered from a real FloodLens run by
+`scripts/render_architecture_video.py`. The same animation runs live in the app's Architecture tab. Static picture: [docs/architecture.png](docs/architecture.png).
 
 Walkthrough video: [docs/nammapulse-walkthrough.mp4](docs/nammapulse-walkthrough.mp4) (captured screens, not a screen recording).
 
