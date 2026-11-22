@@ -1,0 +1,7 @@
+.flood-forecast { margin: 0 16px 8px; border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 10px 12px; background: var(--surface-2); }
+.flood-forecast .big { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.risk-bar { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+.risk-bar > i { display: block; height: 100%; background: var(--cat-flood); }
+.trace { list-style: none; margin: 6px 0 0; padding: 0; }
+.trace li { padding: 5px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.trace .k { color: var(--text-3); font-family: var(--font-mono); font-size: 11px; margin-right: 6px; }

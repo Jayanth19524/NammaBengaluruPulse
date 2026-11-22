@@ -37,9 +37,10 @@ interface Props {
   picking: boolean; onPick: (lat: number, lon: number) => void;
   pins: { lat: number; lon: number; color?: string }[];
   trip: { id: string; geometry: [number, number][]; selected: boolean }[]; tripKey: string;
+  flood: GeoJSON.FeatureCollection | null; focus: { lat: number; lon: number; key: string } | null;
 }
 
-export default function MapView({ items, selectedId, onSelect, picking, onPick, pins, trip, tripKey }: Props) {
+export default function MapView({ items, selectedId, onSelect, picking, onPick, pins, trip, tripKey, flood, focus }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker[]>([]);
@@ -62,6 +63,13 @@ export default function MapView({ items, selectedId, onSelect, picking, onPick, 
       map.addSource("points", { type: "geojson", data: empty });
       map.addSource("columns", { type: "geojson", data: empty });
       map.addSource("trip", { type: "geojson", data: empty });
+      map.addSource("flood", { type: "geojson", data: empty });
+      // Low-lying areas (terrain only) as a faint wash; modelled flood risk as 3D columns.
+      map.addLayer({ id: "flood-terrain", type: "fill", source: "flood", filter: [">=", ["get", "relief_m"], 3],
+        paint: { "fill-color": css("--cat-flood"), "fill-opacity": 0.14 } });
+      map.addLayer({ id: "flood-risk", type: "fill-extrusion", source: "flood", filter: [">=", ["get", "risk"], 0.45],
+        paint: { "fill-extrusion-color": ["interpolate", ["linear"], ["get", "risk"], 0.25, "#9ecbf3", 0.6, "#2a7fd4", 1, "#0b3d91"],
+                 "fill-extrusion-height": ["+", 15, ["*", ["get", "risk"], 55]], "fill-extrusion-opacity": 0.78 } });
       map.addLayer({ id: "trip-alt", type: "line", source: "trip", filter: ["==", ["get", "selected"], false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": css("--text-3"), "line-width": 5, "line-opacity": 0.85 } });
       map.addLayer({ id: "trip-sel", type: "line", source: "trip", filter: ["==", ["get", "selected"], true], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": css("--accent"), "line-width": 6 } });
       // Corridor drawn at true metres: width doubles per zoom level.
@@ -95,6 +103,18 @@ export default function MapView({ items, selectedId, onSelect, picking, onPick, 
     (map.getSource("points") as GeoJSONSource).setData(points);
     (map.getSource("columns") as GeoJSONSource).setData(columns);
   }, [items, ready]);
+
+  // Flood layer + camera focus
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource("flood") as GeoJSONSource).setData(flood ?? empty);
+  }, [flood, ready]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !focus) return;
+    map.easeTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.getZoom(), 15.8), pitch: 62, duration: 700 });
+  }, [focus?.key, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Selection -> highlight + camera
   useEffect(() => {
@@ -151,7 +171,9 @@ export default function MapView({ items, selectedId, onSelect, picking, onPick, 
       <div className="float legend" aria-label="Legend">
         <div className="li"><i /> Monitored route</div>
         <div className="li"><i className="corr" /> Monitoring corridor</div>
-        <div className="li">Column height shows severity</div>
+        {flood && flood.features.length > 0
+          ? <div className="li">Blue columns: modelled flood risk (estimate). Pale wash: low-lying ground.</div>
+          : <div className="li">Column height shows severity</div>}
       </div>
     </div>
   );

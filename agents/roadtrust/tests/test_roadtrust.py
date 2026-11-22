@@ -114,7 +114,7 @@ def test_no_model_means_no_claim_of_analysis():
     a = make_agent()
     inc, _, analysis = a.submit_report(reporter="u", latitude=12.95, longitude=77.6, image=png(), now=NOW)
     assert analysis["cv_run"] is False
-    assert {"type": "photo", "analysed": False} in inc.evidence
+    assert any(e.get("type") == "photo" and e.get("analysed") is False for e in inc.evidence)  # extra keys (image_key) are fine
 
 
 def test_cv_sets_severity_but_not_verification():

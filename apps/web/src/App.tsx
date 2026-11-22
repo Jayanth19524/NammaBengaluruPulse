@@ -1,11 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { buildItems, getHealth, getIncidents, investigate } from "./api/client";
+import { buildItems, getHealth, getIncidents, investigate, runFlood } from "./api/client";
 import MapView from "./map/MapView";
 import AgentStatus from "./screens/AgentStatus";
 import IncidentDetail from "./screens/IncidentDetail";
 import IncidentList, { applyFilters, defaultFilters, FilterBar } from "./screens/IncidentList";
+import { ArchitecturePanel, ArchitectureView } from "./screens/Architecture";
+import FloodPanel from "./screens/FloodPanel";
+import type { FloodResult } from "./api/types";
 import AlertsPanel from "./screens/AlertsPanel";
 import type { MonitoredRoute } from "./api/types";
 import ReportForm from "./screens/ReportForm";
@@ -13,7 +16,7 @@ import TripPanel, { type Pt, type Stage } from "./screens/TripPanel";
 import type { TripPlan } from "./api/types";
 import { ago } from "./design/format";
 
-type Tab = "incidents" | "trip" | "alerts" | "agent";
+type Tab = "incidents" | "trip" | "alerts" | "flood" | "architecture" | "agent";
 
 export default function App() {
   const [params, setParams] = useSearchParams();
@@ -26,6 +29,10 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem("np_routes") ?? "[]"); } catch { return []; }
   });
   useEffect(() => { try { localStorage.setItem("np_routes", JSON.stringify(monitored)); } catch { /* storage unavailable */ } }, [monitored]);
+  const [flood, setFlood] = useState<FloodResult | null>(null);
+  const [archRunning, setArchRunning] = useState(false);
+  const runForArch = useMutation({ mutationFn: () => runFlood(false), onMutate: () => setArchRunning(true), onSettled: () => setArchRunning(false), onSuccess: setFlood });
+  const [focus, setFocus] = useState<{ lat: number; lon: number; key: string } | null>(null);
   const [origin, setOrigin] = useState<Pt | null>(null);
   const [dest, setDest] = useState<Pt | null>(null);
   const [stage, setStage] = useState<Stage>(null);
@@ -75,6 +82,8 @@ export default function App() {
             <button className="tab" role="tab" aria-selected={tab === "incidents"} onClick={() => { setTab("incidents"); setReporting(false); }}>Road incidents</button>
             <button className="tab" role="tab" aria-selected={tab === "trip"} onClick={() => { setTab("trip"); setReporting(false); select(null); }}>Trip</button>
             <button className="tab" role="tab" aria-selected={tab === "alerts"} onClick={() => { setTab("alerts"); setReporting(false); select(null); }}>Alerts</button>
+            <button className="tab" role="tab" aria-selected={tab === "flood"} onClick={() => { setTab("flood"); setReporting(false); select(null); }}>Flood</button>
+            <button className="tab" role="tab" aria-selected={tab === "architecture"} onClick={() => { setTab("architecture"); setReporting(false); select(null); }}>Architecture</button>
             <button className="tab" role="tab" aria-selected={tab === "agent"} onClick={() => { setTab("agent"); setReporting(false); }}>Agent</button>
           </div>
         </div>
@@ -91,6 +100,10 @@ export default function App() {
           ) : tab === "alerts" ? (
             <AlertsPanel routes={monitored} onRemove={(id) => setMonitored((m) => m.filter((r) => r.id !== id))}
               onOpenIncident={(id) => { setTab("incidents"); select(id); }} />
+          ) : tab === "flood" ? (
+            <FloodPanel onResult={setFlood} onFocus={(lat, lon) => setFocus({ lat, lon, key: `${lat},${lon},${Date.now()}` })} />
+          ) : tab === "architecture" ? (
+            <ArchitecturePanel result={flood} step={-1} onStep={() => undefined} />
           ) : tab === "agent" ? (
             <AgentStatus health={health.data} inv={inv.data} />
           ) : selected ? (
@@ -108,8 +121,8 @@ export default function App() {
           <div className="panel-foot"><button className="btn primary block" onClick={() => { setReporting(true); select(null); }}>Report a road problem</button></div>
         )}
       </aside>
-      <MapView items={tab === "trip" ? [] : visible} selectedId={selectedId} onSelect={select} picking={picking} onPick={onPick}
-        pins={pins} trip={tripLines} tripKey={tripKey} />
+      {tab === "architecture" ? <div className="mapwrap"><ArchitectureView result={flood} onRun={() => runForArch.mutate()} running={archRunning} /></div> : <MapView items={tab === "trip" || tab === "flood" ? [] : visible} selectedId={selectedId} onSelect={select} picking={picking} onPick={onPick}
+        pins={pins} trip={tripLines} tripKey={tripKey} flood={tab === "flood" ? flood?.risk_map ?? null : null} focus={focus} />}
     </div>
   );
 }

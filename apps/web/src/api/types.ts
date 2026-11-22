@@ -69,3 +69,19 @@ export interface Run {
   id: string; at: string; events: RunEvent[]; decisions: Decision[];
   summary: { routes: number; findings: number; alerts: number; suppressed: number; degraded: string[]; headline: string; mode?: string; model?: string | null };
 }
+
+export interface FloodFinding {
+  incident_id: string; severity: Severity; confidence: number; verification_status: Basis; route_id: string; distance_m: number;
+  risk: number; location: { latitude: number; longitude: number }; recommended_action: string; is_simulated: boolean;
+  evidence: Record<string, unknown>[];
+}
+export interface FloodForecast {
+  available: boolean; is_scenario: boolean; label?: string; peak_mm_h?: number; accum_6h_mm?: number; accum_24h_mm?: number;
+  window_start?: string | null; window_end?: string | null; hours?: number; source?: string;
+}
+export interface FloodResult {
+  responses: FloodFinding[]; risk_map: GeoJSON.FeatureCollection; forecast: FloodForecast;
+  source_health: { source: string; status: string; error?: string }[];
+  agent: { mode: string; model?: string; reason?: string; summary?: string; steps?: number };
+  trace: { kind: string; message: string; at: string }[]; audit: { routes: number; cells: number; at: string };
+}

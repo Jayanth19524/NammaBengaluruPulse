@@ -1,5 +1,5 @@
 import { DEMO_ROUTES } from "../demo";
-import type { Health, Incident, InvestigateResult, Item, ReportResult, Run, TripPlan, MonitoredRoute } from "./types";
+import type { Health, Incident, InvestigateResult, Item, ReportResult, Run, TripPlan, MonitoredRoute, FloodResult } from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -66,4 +66,11 @@ export function runCheck(routes: MonitoredRoute[]) {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ routes: routes.map((r) => ({ id: r.id, name: r.name, origin: r.origin, destination: r.destination })) }),
   }).then((r) => json<Run>(r));
+}
+
+export function runFlood(scenario: boolean) {
+  return fetch("/flood/investigate", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ routes: DEMO_ROUTES.map((r) => ({ id: r.id, name: r.name, geometry: r.geometry })), use_preset_scenario: scenario }),
+  }).then((r) => json<FloodResult>(r));
 }
