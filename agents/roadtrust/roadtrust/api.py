@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from .adapters.mock import MockRoadAdapter
 from .adapters.overpass import OverpassAdapter
 from .agent import RoadTrustAgent
+from .llm_agent import RoadTrustLLMAgent
 from .agent_log import log as agent_log
 from .config import load_city
 from .detector import load_detector
@@ -35,7 +36,7 @@ def _public(inc) -> dict:
     return inc.model_dump(exclude={"reporter_ids"}, mode="json")
 
 
-def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
+def create_app(agent: RoadTrustAgent | None = None, llm=None) -> FastAPI:
     if agent is None:
         city = load_city()
         adapters = [OverpassAdapter()]
@@ -44,12 +45,17 @@ def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
         agent = RoadTrustAgent(
             city, InMemoryStore(city.roadtrust.dedup_radius_m, city.roadtrust.stale_after_days),
             load_detector(), adapters)
+    if llm is None:
+        from agentkit import from_env
+        llm = from_env()  # None without OPENROUTER_API_KEY -> deterministic investigation
+    investigator = RoadTrustLLMAgent(agent, llm) if llm else agent
     app = FastAPI(title="RoadTrust")
 
     @app.get("/health")
     def health():
         return {"agent": "RoadTrust", "city": agent.city.id, "detector": agent.detector.name,
                 "detector_available": agent.detector.available,
+                "agent_mode": "llm" if llm else "deterministic", "model": getattr(llm, "model", None),
                 "adapters": [{"name": a.name, "simulated": a.is_simulated} for a in agent.adapters]}
 
     @app.post("/reports", status_code=201)
@@ -71,7 +77,7 @@ def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
     @app.post("/investigate")
     def investigate(req: InvestigateRequest):
         try:
-            out = agent.investigate(req.routes)
+            out = investigator.investigate(req.routes)
         except ValueError as exc:
             raise HTTPException(422, str(exc))
         return {**out, "responses": [r.model_dump(mode="json") for r in out["responses"]]}

@@ -109,6 +109,7 @@ class AgentLog:
             self._listeners.append(listener)
         try:
             sent = 0
+            yield ": connected\n\n"  # flush headers through proxies right away so the browser reports "open"
             # replay history
             snapshot = self.snapshot()
             start = max(0, after_index + 1)

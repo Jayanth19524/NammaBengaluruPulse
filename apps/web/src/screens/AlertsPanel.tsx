@@ -16,6 +16,7 @@ function AlertCard({ d, onOpen }: { d: Decision; onOpen?: () => void }) {
         <span className="row-title">{f.title}</span><SeverityBadge s={f.severity} />
       </div>
       <div className="row-sub"><BasisBadge b={f.basis} /><span className="mono">relevance {f.score.toFixed(2)}</span></div>
+      {f.explanation && <p style={{ margin: "8px 0 0" }}>{f.explanation}</p>}
       <div className="action"><strong>What to do</strong><div>{f.action}</div></div>
       <details>
         <summary className="muted" style={{ cursor: "pointer" }}>Why am I seeing this?</summary>
@@ -56,6 +57,9 @@ export default function AlertsPanel({ routes, onRemove, onOpenIncident }: {
         <>
           <div className="note" style={{ margin: "0 16px 8px" }} role="status">
             {run.summary.headline}. Checked {ago(run.at)}.
+            <div className="faint">{run.summary.mode === "llm" ? `Investigated by an AI agent (${run.summary.model}).`
+              : run.summary.mode === "deterministic_fallback" ? "The AI agent did not finish, so fixed checks were used."
+              : "Fixed checks only: no AI model is configured."}</div>
           </div>
           {alerts.length > 0 && <div className="group-title">Alerts ({alerts.length})</div>}
           {alerts.map((d) => <AlertCard key={d.key} d={d} onOpen={d.finding.incident_id ? () => onOpenIncident(d.finding.incident_id!) : undefined} />)}

@@ -61,11 +61,11 @@ export interface Finding {
   key: string; agent: "RoadTrust" | "TripCast"; category: "road" | "traffic"; kind: string; title: string;
   severity: Severity; basis: Basis; confidence: number; route_ids: string[]; distance_m: number | null;
   action: string; observed_at: string; simulated: boolean; incident_id: string | null;
-  score: number; score_parts: Record<string, number>;
+  score: number; score_parts: Record<string, number>; explanation?: string | null;
 }
 export interface Decision { key: string; action: "alert" | "suppress"; rank: number | null; reasons: string[]; finding: Finding }
 export interface RunEvent { node: string; level: "info" | "warn"; message: string; data: Record<string, unknown> }
 export interface Run {
   id: string; at: string; events: RunEvent[]; decisions: Decision[];
-  summary: { routes: number; findings: number; alerts: number; suppressed: number; degraded: string[]; headline: string };
+  summary: { routes: number; findings: number; alerts: number; suppressed: number; degraded: string[]; headline: string; mode?: string; model?: string | null };
 }

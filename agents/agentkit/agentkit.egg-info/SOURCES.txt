@@ -1,0 +1,10 @@
+pyproject.toml
+agentkit/__init__.py
+agentkit/llm.py
+agentkit/loop.py
+agentkit.egg-info/PKG-INFO
+agentkit.egg-info/SOURCES.txt
+agentkit.egg-info/dependency_links.txt
+agentkit.egg-info/requires.txt
+agentkit.egg-info/top_level.txt
+tests/test_agentkit.py

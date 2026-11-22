@@ -4,6 +4,8 @@ import os
 
 from fastapi import FastAPI, HTTPException
 
+from agentkit import from_env
+
 from .clients import HttpRoadClient, HttpTripClient
 from .config import load_settings
 from .graph import Orchestrator
@@ -15,12 +17,14 @@ def create_app(orch: Orchestrator | None = None) -> FastAPI:
     if orch is None:
         orch = Orchestrator(HttpTripClient(os.environ.get("TRIPCAST_URL", "http://localhost:8003")),
                             HttpRoadClient(os.environ.get("ROADTRUST_URL", "http://localhost:8002")),
-                            Store(os.environ.get("ORCHESTRATOR_DB", "orchestrator.db")), load_settings())
+                            Store(os.environ.get("ORCHESTRATOR_DB", "orchestrator.db")), load_settings(),
+                            llm=from_env())  # None without OPENROUTER_API_KEY -> fixed checks
     app = FastAPI(title="Orchestrator")
 
     @app.get("/health")
     def health():
-        return {"agent": "Orchestrator", "framework": "langgraph", "relevance_threshold": orch.s.relevance_threshold}
+        return {"agent": "Orchestrator", "framework": "langgraph", "mode": "llm" if orch.llm else "deterministic",
+                "model": getattr(orch.llm, "model", None), "relevance_threshold": orch.s.relevance_threshold}
 
     @app.post("/run")
     def run(req: RunRequest):

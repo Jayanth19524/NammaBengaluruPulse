@@ -15,6 +15,7 @@ from typing import Annotated, Callable, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from .agentic import run_gather, run_review
 from .clients import AgentUnavailable, RoadClient, TripClient
 from .config import Settings
 from .models import SEV_ORDER, Decision, Finding, MonitoredRoute, RunRequest
@@ -38,6 +39,8 @@ class State(TypedDict, total=False):
     decisions: list[Decision]
     degraded: list[str]
     summary: dict
+    judgments: dict
+    mode: str
 
 
 def _ev(node: str, message: str, level: str = "info", **data) -> list[dict]:
@@ -56,22 +59,26 @@ def _min(n: float) -> str:
 
 class Orchestrator:
     def __init__(self, trip: TripClient, road: RoadClient, store: Store, settings: Settings,
-                 clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc)):
-        self.trip, self.road, self.store, self.s, self.clock = trip, road, store, settings, clock
+                 clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc), llm=None):
+        self.trip, self.road, self.store, self.s, self.clock, self.llm = trip, road, store, settings, clock, llm
         self.graph = self._build()
 
     # ---- graph wiring ---------------------------------------------------
     def _build(self):
         g = StateGraph(State)
-        for name in ("plan_regions", "trip", "road", "normalize", "dedupe", "score", "decide", "record"):
+        for name in ("plan_regions", "trip", "road", "agent_gather", "normalize", "dedupe", "score", "agent_review", "decide", "record"):
             g.add_node(name, getattr(self, f"n_{name}"))
         g.add_edge(START, "plan_regions")
-        g.add_edge("plan_regions", "trip")
+        g.add_conditional_edges("plan_regions", lambda st: "agent_gather" if self.llm else "trip",
+                                {"agent_gather": "agent_gather", "trip": "trip"})
         g.add_edge("trip", "road")
         g.add_conditional_edges("road", self.after_road, {"normalize": "normalize", "record": "record"})
+        g.add_conditional_edges("agent_gather", self.after_road, {"normalize": "normalize", "record": "record"})
         g.add_edge("normalize", "dedupe")
         g.add_edge("dedupe", "score")
-        g.add_edge("score", "decide")
+        g.add_conditional_edges("score", lambda st: "agent_review" if self.llm else "decide",
+                                {"agent_review": "agent_review", "decide": "decide"})
+        g.add_edge("agent_review", "decide")
         g.add_edge("decide", "record")
         g.add_edge("record", END)
         return g.compile()
@@ -81,6 +88,18 @@ class Orchestrator:
                                  "events": [], "trips": {}, "geometries": {}, "road": {}, "findings": [],
                                  "decisions": [], "degraded": []})
         return self.store.get_run(out["run_id"])
+
+    # ---- LLM-driven nodes (see agentic.py) --------------------------------
+    def _trip_one(self, r: MonitoredRoute, depart_at):
+        plan = self.trip.plan(r.origin, r.destination, depart_at)
+        primary = min(plan["routes"], key=lambda p: p["prediction"]["free_flow_s"])
+        return {"plan": plan, "primary": primary}
+
+    def n_agent_gather(self, st: State):
+        return run_gather(self, st)
+
+    def n_agent_review(self, st: State):
+        return run_review(self, st)
 
     # ---- nodes ----------------------------------------------------------
     def n_plan_regions(self, st: State):
@@ -227,17 +246,26 @@ class Orchestrator:
         alerts = 0
         for f in sorted(st["findings"], key=lambda x: -(x.score or 0)):
             reason = self._suppression(f, routes, req, now)
+            j = st.get("judgments", {}).get(f.key)
+            override = None
+            if reason is None and j and j["action"] == "suppress":
+                if SEV_ORDER.index(f.severity) >= SEV_ORDER.index("high"):
+                    override = "agent suggested suppressing this, but high/critical findings always alert"
+                else:
+                    reason = f"agent judgment: {j['reason']}"
             if reason is None and alerts >= s.max_alerts_per_run:
                 reason = f"over the limit of {s.max_alerts_per_run} alerts per run (lower priority)"
             if reason:
                 decisions.append(Decision(key=f.key, action="suppress", reasons=[reason], finding=f))
                 continue
             alerts += 1
+            if j and j.get("message"):
+                f.explanation = j["message"]
             dist = f"{round(f.distance_m)} m from the route" if f.distance_m is not None else "affects the whole route"
             decisions.append(Decision(key=f.key, action="alert", rank=alerts, finding=f, reasons=[
                 f"relevance {f.score} is above the {s.relevance_threshold} threshold",
                 f"{f.severity} severity, {f.basis} ({'predicted from a model estimate' if f.basis == 'predicted' else 'not independently verified' if f.basis == 'reported' else 'official source'})",
-                dist]))
+                dist] + ([f"agent: {j['reason']}"] if j and j["action"] == "alert" else []) + ([override] if override else [])))
         ev = [e for d in decisions for e in _ev("decide", f"{d.action.upper()}: {d.finding.title}", key=d.key, reasons=d.reasons)]
         return {"decisions": decisions, "events": ev}
 
@@ -266,6 +294,7 @@ class Orchestrator:
         suppressed = [d for d in decisions if d.action == "suppress"]
         summary = {"routes": len(st["request"].routes), "findings": len(st.get("findings", [])),
                    "alerts": len(alerts), "suppressed": len(suppressed), "degraded": st["degraded"],
+                   "mode": st.get("mode", "deterministic"), "model": getattr(self.llm, "model", None) if st.get("mode") == "llm" else None,
                    "headline": _headline(alerts, st["degraded"], bool(st["trips"] or st["road"]),
                                       sum("already alerted" in d.reasons[0] for d in suppressed))}
         ev = list(st["events"]) + _ev("record", summary["headline"], **{k: summary[k] for k in ("alerts", "suppressed")})

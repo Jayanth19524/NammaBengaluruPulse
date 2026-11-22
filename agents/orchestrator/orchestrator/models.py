@@ -41,6 +41,7 @@ class Finding(BaseModel):
     simulated: bool = False
     incident_id: str | None = None
     score: float | None = None
+    explanation: str | None = None   # plain-language text written by the LLM review step
     score_parts: dict[str, float] = {}
 
 
