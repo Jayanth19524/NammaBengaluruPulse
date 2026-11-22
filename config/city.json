@@ -1,0 +1,39 @@
+{
+  "name": "Bengaluru",
+  "country": "India",
+  "bbox": {
+    "north": 13.1627,
+    "south": 12.8340,
+    "east": 77.7794,
+    "west": 77.4601
+  },
+  "center": {
+    "latitude": 12.9716,
+    "longitude": 77.5946
+  },
+  "defaultScanRadiusMeters": 500,
+  "maxScanRadiusMeters": 5000,
+  "defaultZoom": 13,
+  "severityThresholds": {
+    "supply_disruption": {
+      "low": { "durationHrs": 2, "reportCount": 1 },
+      "moderate": { "durationHrs": 6, "reportCount": 3 },
+      "high": { "durationHrs": 12, "reportCount": 5 },
+      "critical": { "durationHrs": 24, "reportCount": 10 }
+    },
+    "tanker_shortage": {
+      "low": { "durationHrs": 4, "reportCount": 1 },
+      "moderate": { "durationHrs": 8, "reportCount": 2 },
+      "high": { "durationHrs": 16, "reportCount": 4 },
+      "critical": { "durationHrs": 32, "reportCount": 8 }
+    },
+    "sensor_anomaly": {
+      "sensorDeviationLow": 0.1,
+      "sensorDeviationModerate": 0.3,
+      "sensorDeviationHigh": 0.5,
+      "sensorDeviationCritical": 0.8
+    }
+  },
+  "incidentExpiryHrs": 48,
+  "notificationDedupeWindowHrs": 6
+}

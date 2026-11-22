@@ -1,0 +1,17 @@
+{
+  "name": "nammapulse",
+  "private": true,
+  "version": "1.0.0",
+  "description": "NammaPulse — WaterWatch urban water supply monitoring platform",
+  "scripts": {
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:agent": "cd agents/waterwatch && uvicorn main:app --reload --port 8000",
+    "install:all": "cd packages/contracts && npm install && cd ../../apps/api && npm install && cd ../web && npm install",
+    "build:contracts": "cd packages/contracts && npm run build"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ]
+}
