@@ -1,5 +1,5 @@
 import { DEMO_ROUTES } from "../demo";
-import type { Health, Incident, InvestigateResult, Item, ReportResult } from "./types";
+import type { Health, Incident, InvestigateResult, Item, ReportResult, TripPlan } from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -52,4 +52,11 @@ export function buildItems(incidents: Incident[], inv: InvestigateResult | undef
       description: i.description,
     };
   });
+}
+
+export function planTrip(origin: { lat: number; lon: number }, dest: { lat: number; lon: number }, departAt: string | null) {
+  return fetch("/trip/plan", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ origin: [origin.lat, origin.lon], destination: [dest.lat, dest.lon], depart_at: departAt }),
+  }).then((r) => json<TripPlan>(r));
 }

@@ -12,7 +12,6 @@ function evidenceLine(e: Record<string, unknown>): string {
     case "photo": return "Photo stored. It was not analysed because no detection model is running.";
     case "osm_way": return "OpenStreetMap way tagged as roadworks or restricted access.";
     case "repair_claim": return String(e.note);
-    case "simulated": return String(e.note);
     default: return String(e.type);
   }
 }
@@ -37,7 +36,7 @@ export default function IncidentDetail({ it, onBack }: { it: Item; onBack: () =>
         <dt>Source</dt><dd>{it.sources.join(", ")}</dd>
       </dl>
       <strong>Evidence</strong>
-      <ul className="evidence">{it.evidence.map((e, i) => <li key={i}>{evidenceLine(e)}</li>)}</ul>
+      <ul className="evidence">{it.evidence.filter((e) => e.type !== "simulated").map((e, i) => <li key={i}>{evidenceLine(e)}</li>)}</ul>
     </div>
   );
 }

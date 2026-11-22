@@ -36,7 +36,7 @@ def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
         import os
         city = load_city()
         adapters = [OverpassAdapter()]
-        if os.environ.get("ROADTRUST_USE_MOCK", "1") == "1":
+        if os.environ.get("ROADTRUST_USE_MOCK", "0") == "1":
             adapters.append(MockRoadAdapter())  # labelled is_simulated everywhere
         agent = RoadTrustAgent(
             city, InMemoryStore(city.roadtrust.dedup_radius_m, city.roadtrust.stale_after_days),

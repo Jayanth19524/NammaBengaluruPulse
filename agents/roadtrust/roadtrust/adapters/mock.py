@@ -31,6 +31,5 @@ class MockRoadAdapter:
                 reporter_id=f"mock:{row['id']}", source=self.name,
                 observed_at=now - timedelta(hours=row.get("hours_ago", 1)),
                 confidence=0.5, is_simulated=True,
-                evidence=[{"type": "simulated", "note": "Demo fixture, not a real observation"}],
             ))
         return out

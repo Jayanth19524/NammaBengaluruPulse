@@ -32,3 +32,14 @@ export interface Item {
   action: string; evidence: Record<string, unknown>[]; sources: string[]; observedAt: string;
   simulated: boolean; repairStatus: Incident["repair_status"]; reportCount: number; description: string;
 }
+
+export interface Prediction { predicted_s: number; low_s: number; high_s: number; snapshot_s: number; free_flow_s: number; arrive_at: string; basis: string }
+export interface TripWarning { kind: Kind; severity: Severity; basis: Basis; distance_m: number | null; simulated: boolean; action: string }
+export interface PlannedRoute {
+  id: string; geometry: [number, number][]; distance_m: number; prediction: Prediction; via: string[];
+  warnings: TripWarning[]; recommended: boolean; delta_vs_best_s: number; incidents_on_route: number;
+}
+export interface DepartureOption { depart_at: string; predicted_s: number; arrive_at: string }
+export interface TripPlan {
+  routes: PlannedRoute[]; departure_options: DepartureOption[]; road_incidents: string; profile: string; live_traffic: string | null;
+}

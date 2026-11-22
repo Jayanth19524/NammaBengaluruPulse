@@ -47,15 +47,16 @@ class InMemoryStore:
             )
             self._items[inc.id] = inc
             return inc, True
-        if r.reporter_id not in dup.reporter_ids:
-            dup.reporter_ids.add(r.reporter_id)
-            dup.report_count += 1
         dup.last_seen = max(dup.last_seen, r.observed_at)
+        if r.reporter_id in dup.reporter_ids:
+            return dup, False  # same reporter or the same feed record seen again: nothing new
+        dup.reporter_ids.add(r.reporter_id)
+        dup.report_count += 1
         if SEVERITY_ORDER.index(r.severity) > SEVERITY_ORDER.index(dup.severity):
             dup.severity = r.severity
         if r.source not in dup.sources:
             dup.sources.append(r.source)
-        dup.evidence.extend(r.evidence)
+        dup.evidence.extend(e for e in r.evidence if e not in dup.evidence)
         dup.confidence = max(dup.confidence, r.confidence)
         if r.verification_status == "confirmed":
             dup.verification_status = "confirmed"

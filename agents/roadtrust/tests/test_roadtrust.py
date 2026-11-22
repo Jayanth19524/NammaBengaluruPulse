@@ -225,3 +225,12 @@ def test_api_flow():
     rep = client.post(f"/incidents/{iid}/repair", json={"status": "repaired", "source": "user"}).json()
     assert rep["repair_status"] == "repair_reported"
     assert client.post("/incidents/nope/repair", json={"status": "repaired", "source": "x"}).status_code == 404
+
+
+def test_repeated_investigations_do_not_pile_up_evidence():
+    a = make_agent(adapters=[MockRoadAdapter()])
+    for _ in range(5):
+        a.investigate([ROUTE], now=NOW)
+    r = a.investigate([ROUTE], now=NOW)["responses"][0]
+    assert r.evidence.count({"type": "report_count", "count": 1, "note": "Distinct reporters; not independent verification"}) == 1
+    assert len(r.evidence) == 1

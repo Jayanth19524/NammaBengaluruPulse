@@ -34,13 +34,15 @@ const routesCollection = (): FC => ({
 
 interface Props {
   items: Item[]; selectedId: string | null; onSelect: (id: string | null) => void;
-  picking: boolean; picked: { lat: number; lon: number } | null; onPick: (lat: number, lon: number) => void;
+  picking: boolean; onPick: (lat: number, lon: number) => void;
+  pins: { lat: number; lon: number; color?: string }[];
+  trip: { id: string; geometry: [number, number][]; selected: boolean }[]; tripKey: string;
 }
 
-export default function MapView({ items, selectedId, onSelect, picking, picked, onPick }: Props) {
+export default function MapView({ items, selectedId, onSelect, picking, onPick, pins, trip, tripKey }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const markerRef = useRef<maplibregl.Marker[]>([]);
   const [ready, setReady] = useState(false);
   const [is3d, setIs3d] = useState(true);
   // Latest callbacks/state for handlers registered once.
@@ -59,6 +61,9 @@ export default function MapView({ items, selectedId, onSelect, picking, picked, 
       map.addSource("routes", { type: "geojson", data: routesCollection() });
       map.addSource("points", { type: "geojson", data: empty });
       map.addSource("columns", { type: "geojson", data: empty });
+      map.addSource("trip", { type: "geojson", data: empty });
+      map.addLayer({ id: "trip-alt", type: "line", source: "trip", filter: ["==", ["get", "selected"], false], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": css("--text-3"), "line-width": 5, "line-opacity": 0.85 } });
+      map.addLayer({ id: "trip-sel", type: "line", source: "trip", filter: ["==", ["get", "selected"], true], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": css("--accent"), "line-width": 6 } });
       // Corridor drawn at true metres: width doubles per zoom level.
       map.addLayer({ id: "corridor", type: "line", source: "routes", layout: { "line-cap": "round" }, paint: { "line-color": accent, "line-opacity": 0.24, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 10, 0.67, 20, 684] } });
       map.addLayer({ id: "route", type: "line", source: "routes", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": accent, "line-width": 3.5 } });
@@ -109,10 +114,26 @@ export default function MapView({ items, selectedId, onSelect, picking, picked, 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    markerRef.current?.remove();
-    markerRef.current = null;
-    if (picked && picking) markerRef.current = new maplibregl.Marker({ color: css("--accent") }).setLngLat([picked.lon, picked.lat]).addTo(map);
-  }, [picked, picking, ready]);
+    markerRef.current.forEach((m) => m.remove());
+    markerRef.current = pins.map((p) => new maplibregl.Marker({ color: p.color ?? css("--accent") }).setLngLat([p.lon, p.lat]).addTo(map));
+  }, [pins, ready]);
+
+  // Trip routes: redraw when the set changes or the selection changes; fit the view only on a new result.
+  const fitted = useRef("");
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    (map.getSource("trip") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: trip.map((t) => ({ type: "Feature", properties: { id: t.id, selected: t.selected }, geometry: { type: "LineString", coordinates: t.geometry } })),
+    });
+    if (trip.length && fitted.current !== tripKey) {
+      fitted.current = tripKey;
+      const b = new maplibregl.LngLatBounds();
+      trip.forEach((t) => t.geometry.forEach((c) => b.extend(c)));
+      map.fitBounds(b, { padding: { top: 80, bottom: 80, left: 60, right: 60 }, pitch: 40, bearing: 0, duration: 900 });
+    }
+  }, [trip, tripKey, ready]);
 
   function setView(three: boolean) {
     setIs3d(three);
