@@ -109,7 +109,14 @@ export default function MapView({ items, selectedId, onSelect, picking, onPick, 
     const map = mapRef.current;
     if (!map || !ready) return;
     (map.getSource("flood") as GeoJSONSource).setData(flood ?? empty);
+    if (flood && flood.features.length && fitFlood.current !== flood) {  // show the whole predicted area, not one cell
+      fitFlood.current = flood;
+      const b = new maplibregl.LngLatBounds();
+      flood.features.forEach((f) => (f.geometry as GeoJSON.Polygon).coordinates[0].forEach((c) => b.extend(c as [number, number])));
+      map.fitBounds(b, { padding: { top: 60, bottom: 60, left: 40, right: 40 }, pitch: 55, bearing: -10, maxZoom: 14.6, duration: 900 });
+    }
   }, [flood, ready]);
+  const fitFlood = useRef<GeoJSON.FeatureCollection | null>(null);
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !focus) return;
