@@ -1,15 +1,19 @@
 """RoadTrust HTTP service (FastAPI). The Node API / orchestrator calls this."""
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from .adapters.mock import MockRoadAdapter
 from .adapters.overpass import OverpassAdapter
 from .agent import RoadTrustAgent
+from .agent_log import log as agent_log
 from .config import load_city
 from .detector import load_detector
 from .gps import GpsError
@@ -33,7 +37,6 @@ def _public(inc) -> dict:
 
 def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
     if agent is None:
-        import os
         city = load_city()
         adapters = [OverpassAdapter()]
         if os.environ.get("ROADTRUST_USE_MOCK", "0") == "1":
@@ -84,5 +87,43 @@ def create_app(agent: RoadTrustAgent | None = None) -> FastAPI:
         inc = agent.store.update_repair(incident_id, req.status, req.source, req.official,
                                         datetime.now(timezone.utc))
         return _public(inc)
+
+    @app.get("/images/{key}")
+    def get_image(key: str):
+        """Serve a stored (EXIF-stripped) image by its content-addressed key."""
+        image_dir = os.environ.get("ROADTRUST_IMAGE_DIR")
+        if not image_dir:
+            raise HTTPException(404, "image storage not configured")
+        # Sanitize key: only hex chars allowed
+        if not all(c in "0123456789abcdef" for c in key):
+            raise HTTPException(400, "invalid key")
+        path = Path(image_dir) / f"{key}.jpg"
+        if not path.exists():
+            raise HTTPException(404, "not found")
+        return FileResponse(str(path), media_type="image/jpeg")
+
+    @app.get("/log")
+    def log_stream():
+        """Server-sent events stream of real-time agent execution events.
+        The UI subscribes to this to show the agent working in real time.
+        Each event is a JSON object: {kind, message, data, at}.
+        """
+        def generate():
+            yield from agent_log.sse_stream()
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",   # nginx: disable proxy buffering
+                "Connection": "keep-alive",
+            },
+        )
+
+    @app.get("/log/snapshot")
+    def log_snapshot():
+        """Return current buffered log events as JSON (for initial page load)."""
+        return {"events": agent_log.snapshot()}
 
     return app

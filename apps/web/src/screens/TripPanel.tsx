@@ -64,9 +64,9 @@ function Departures({ opts }: { opts: DepartureOption[] }) {
   );
 }
 
-export default function TripPanel({ origin, dest, stage, setStage, onClear, onPlan, selectedRoute, setSelectedRoute }: {
+export default function TripPanel({ origin, dest, stage, setStage, onClear, onPlan, selectedRoute, setSelectedRoute, onMonitor, monitoredCount }: {
   origin: Pt | null; dest: Pt | null; stage: Stage; setStage: (s: Stage) => void; onClear: () => void;
-  onPlan: (p: TripPlan | null) => void; selectedRoute: string | null; setSelectedRoute: (id: string) => void;
+  onPlan: (p: TripPlan | null) => void; onMonitor: () => void; monitoredCount: number; selectedRoute: string | null; setSelectedRoute: (id: string) => void;
 }) {
   const [when, setWhen] = useState(localInputNow());
   const [now, setNow] = useState(true);
@@ -94,6 +94,7 @@ export default function TripPanel({ origin, dest, stage, setStage, onClear, onPl
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn primary" disabled={!origin || !dest || m.isPending} onClick={() => m.mutate()}>{m.isPending ? "Finding routes…" : "Find routes"}</button>
           <button className="btn" onClick={() => { onClear(); m.reset(); }}>Clear</button>
+          <button className="btn" disabled={!origin || !dest} onClick={onMonitor}>Watch this trip</button>
         </div>
       </div>
       {m.isPending && <div><div className="skel" /><div className="skel" /></div>}

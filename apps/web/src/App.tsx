@@ -6,12 +6,14 @@ import MapView from "./map/MapView";
 import AgentStatus from "./screens/AgentStatus";
 import IncidentDetail from "./screens/IncidentDetail";
 import IncidentList, { applyFilters, defaultFilters, FilterBar } from "./screens/IncidentList";
+import AlertsPanel from "./screens/AlertsPanel";
+import type { MonitoredRoute } from "./api/types";
 import ReportForm from "./screens/ReportForm";
 import TripPanel, { type Pt, type Stage } from "./screens/TripPanel";
 import type { TripPlan } from "./api/types";
 import { ago } from "./design/format";
 
-type Tab = "incidents" | "trip" | "agent";
+type Tab = "incidents" | "trip" | "alerts" | "agent";
 
 export default function App() {
   const [params, setParams] = useSearchParams();
@@ -20,6 +22,10 @@ export default function App() {
   const [reporting, setReporting] = useState(false);
   const [picked, setPicked] = useState<{ lat: number; lon: number } | null>(null);
   const [filters, setFilters] = useState(defaultFilters);
+  const [monitored, setMonitored] = useState<MonitoredRoute[]>(() => {
+    try { return JSON.parse(localStorage.getItem("np_routes") ?? "[]"); } catch { return []; }
+  });
+  useEffect(() => { try { localStorage.setItem("np_routes", JSON.stringify(monitored)); } catch { /* storage unavailable */ } }, [monitored]);
   const [origin, setOrigin] = useState<Pt | null>(null);
   const [dest, setDest] = useState<Pt | null>(null);
   const [stage, setStage] = useState<Stage>(null);
@@ -68,6 +74,7 @@ export default function App() {
           <div className="tabs" role="tablist">
             <button className="tab" role="tab" aria-selected={tab === "incidents"} onClick={() => { setTab("incidents"); setReporting(false); }}>Road incidents</button>
             <button className="tab" role="tab" aria-selected={tab === "trip"} onClick={() => { setTab("trip"); setReporting(false); select(null); }}>Trip</button>
+            <button className="tab" role="tab" aria-selected={tab === "alerts"} onClick={() => { setTab("alerts"); setReporting(false); select(null); }}>Alerts</button>
             <button className="tab" role="tab" aria-selected={tab === "agent"} onClick={() => { setTab("agent"); setReporting(false); }}>Agent</button>
           </div>
         </div>
@@ -78,7 +85,12 @@ export default function App() {
           ) : tab === "trip" ? (
             <TripPanel origin={origin} dest={dest} stage={stage} setStage={setStage} onPlan={setPlan}
               onClear={() => { setOrigin(null); setDest(null); setPlan(null); setStage(null); setRouteId(null); }}
-              selectedRoute={routeId} setSelectedRoute={setRouteId} />
+              selectedRoute={routeId} setSelectedRoute={setRouteId} monitoredCount={monitored.length}
+              onMonitor={() => origin && dest && setMonitored((m) => [...m, { id: `route-${Date.now()}`, name: `Trip ${m.length + 1}`,
+                origin: [origin.lat, origin.lon], destination: [dest.lat, dest.lon] }])} />
+          ) : tab === "alerts" ? (
+            <AlertsPanel routes={monitored} onRemove={(id) => setMonitored((m) => m.filter((r) => r.id !== id))}
+              onOpenIncident={(id) => { setTab("incidents"); select(id); }} />
           ) : tab === "agent" ? (
             <AgentStatus health={health.data} inv={inv.data} />
           ) : selected ? (

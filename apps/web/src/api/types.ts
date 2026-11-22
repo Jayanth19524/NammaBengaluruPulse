@@ -43,3 +43,29 @@ export interface DepartureOption { depart_at: string; predicted_s: number; arriv
 export interface TripPlan {
   routes: PlannedRoute[]; departure_options: DepartureOption[]; road_incidents: string; profile: string; live_traffic: string | null;
 }
+
+/** One real-time agent execution event emitted via SSE from /log */
+export type AgentEventKind =
+  | "start" | "adapter_fetch" | "adapter_ok" | "adapter_error"
+  | "dedup" | "geo_check" | "result" | "done" | "report_submitted";
+
+export interface AgentEvent {
+  kind: AgentEventKind;
+  message: string;
+  data: Record<string, unknown>;
+  at: string;
+}
+
+export interface MonitoredRoute { id: string; name: string; origin: [number, number]; destination: [number, number]; demo?: boolean }
+export interface Finding {
+  key: string; agent: "RoadTrust" | "TripCast"; category: "road" | "traffic"; kind: string; title: string;
+  severity: Severity; basis: Basis; confidence: number; route_ids: string[]; distance_m: number | null;
+  action: string; observed_at: string; simulated: boolean; incident_id: string | null;
+  score: number; score_parts: Record<string, number>;
+}
+export interface Decision { key: string; action: "alert" | "suppress"; rank: number | null; reasons: string[]; finding: Finding }
+export interface RunEvent { node: string; level: "info" | "warn"; message: string; data: Record<string, unknown> }
+export interface Run {
+  id: string; at: string; events: RunEvent[]; decisions: Decision[];
+  summary: { routes: number; findings: number; alerts: number; suppressed: number; degraded: string[]; headline: string };
+}

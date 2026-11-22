@@ -1,5 +1,5 @@
 import { DEMO_ROUTES } from "../demo";
-import type { Health, Incident, InvestigateResult, Item, ReportResult, TripPlan } from "./types";
+import type { Health, Incident, InvestigateResult, Item, ReportResult, Run, TripPlan, MonitoredRoute } from "./types";
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -59,4 +59,11 @@ export function planTrip(origin: { lat: number; lon: number }, dest: { lat: numb
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ origin: [origin.lat, origin.lon], destination: [dest.lat, dest.lon], depart_at: departAt }),
   }).then((r) => json<TripPlan>(r));
+}
+
+export function runCheck(routes: MonitoredRoute[]) {
+  return fetch("/orch/run", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ routes: routes.map((r) => ({ id: r.id, name: r.name, origin: r.origin, destination: r.destination })) }),
+  }).then((r) => json<Run>(r));
 }

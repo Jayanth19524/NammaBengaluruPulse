@@ -7,6 +7,7 @@ Incident columns are extruded by severity. Currently shows RoadTrust data only.
 # terminal 1: RoadTrust API (see agents/roadtrust/README.md)
 uvicorn roadtrust.api:create_app --factory --port 8002
 # terminal 2 (TripCast, optional TOMTOM_API_KEY for live traffic): uvicorn tripcast.api:create_app --factory --port 8003
+# orchestrator: ORCHESTRATOR_DB=orchestrator.db uvicorn orchestrator.api:create_app --factory --port 8004
 # terminal 3
 npm install && npm run dev   # http://127.0.0.1:5173, /api proxies to :8002
 ```

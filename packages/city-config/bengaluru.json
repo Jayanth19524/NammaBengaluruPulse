@@ -2,12 +2,60 @@
   "id": "bengaluru",
   "name": "Bengaluru",
   "country": "IN",
-  "bbox": [77.35, 12.78, 77.85, 13.20],
+  "bbox": [
+    77.35,
+    12.78,
+    77.85,
+    13.2
+  ],
   "roadtrust": {
     "default_corridor_m": 50,
     "dedup_radius_m": 25,
     "stale_after_days": 30,
     "min_detection_confidence": 0.4,
     "max_image_bytes": 8388608
+  },
+  "orchestrator": {
+    "relevance_threshold": 0.45,
+    "weights": {
+      "severity": 0.4,
+      "proximity": 0.25,
+      "basis": 0.2,
+      "confidence": 0.15
+    },
+    "severity_weight": {
+      "info": 0.1,
+      "low": 0.35,
+      "moderate": 0.6,
+      "high": 0.85,
+      "critical": 1.0
+    },
+    "basis_weight": {
+      "confirmed": 1.0,
+      "reported": 0.7,
+      "predicted": 0.6
+    },
+    "cooldown_hours": 6,
+    "max_alerts_per_run": 5,
+    "traffic": {
+      "min_surprise_s": 300,
+      "min_surprise_ratio": 0.15,
+      "severe_ratio": 1.8,
+      "severity_by_ratio": [
+        [
+          2.2,
+          "high"
+        ],
+        [
+          1.8,
+          "moderate"
+        ],
+        [
+          1.4,
+          "low"
+        ]
+      ],
+      "min_alt_saving_s": 180
+    }
   }
 }
