@@ -100,3 +100,18 @@ textarea.input { min-height: 72px; resize: vertical; }
 .dep { width: 100%; border-collapse: collapse; margin-top: 6px; }
 .dep td { padding: 5px 0; border-top: 1px solid var(--border); }
 .dep tr.best td:nth-child(2) { font-weight: 600; }
+
+/* Agent execution log */
+.log-wrap { max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-control); margin: 6px 0 0; background: var(--surface-2); }
+.log-empty { padding: 12px; }
+.log-row { display: grid; grid-template-columns: 20px 1fr auto; gap: 6px; align-items: baseline; padding: 5px 10px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.log-row:last-child { border-bottom: none; }
+.log-icon { font-size: 11px; text-align: center; flex: none; }
+.log-msg { flex: 1; min-width: 0; line-height: 1.4; }
+.log-time { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; flex: none; }
+
+/* Running indicator dot */
+.running-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); flex: none; }
+.running-dot.active { background: var(--sev-low); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .running-dot.active { animation: none; } }

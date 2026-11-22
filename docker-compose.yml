@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  roadtrust:
+    build:
+      context: agents/roadtrust
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      PORT: "8002"
+      NAMMAPULSE_CITY: bengaluru
+      NAMMAPULSE_CITY_DIR: /city-config
+      ROADTRUST_USE_MOCK: "1"            # always seed demo data for local runs
+      ROADTRUST_IMAGE_DIR: /data/images  # EXIF-stripped photos stored here
+      # ROADTRUST_YOLO_WEIGHTS: /models/best.pt  # uncomment once weights are available
+    volumes:
+      - ./packages/city-config:/city-config:ro
+      - roadtrust-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  tripcast:
+    build:
+      context: agents/tripcast
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      PORT: "8003"
+      ROADTRUST_URL: http://roadtrust:8002
+      # TOMTOM_API_KEY: your-key-here
+    depends_on:
+      roadtrust:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      ROADTRUST_URL: http://roadtrust:8002
+      TRIPCAST_URL: http://tripcast:8003
+    depends_on:
+      - roadtrust
+      - tripcast
+
+volumes:
+  roadtrust-data:
