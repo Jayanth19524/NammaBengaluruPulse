@@ -1,0 +1,46 @@
+/* Design tokens. Colour carries meaning only: category and severity. One accent for actions. */
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --surface-2: #f0f2f4;
+  --border: #e1e4e8;
+  --text: #15181c;
+  --text-2: #5b636d;
+  --text-3: #8a929c;
+  --accent: #1d5fd1;
+  --accent-contrast: #ffffff;
+  --focus: #1d5fd1;
+
+  --cat-flood: #2a7fd4;
+  --cat-road: #c47a0a;
+  --cat-water: #12877f;
+
+  --sev-info: #8a929c;
+  --sev-low: #2f9e5b;
+  --sev-moderate: #d4a20a;
+  --sev-high: #e2701a;
+  --sev-critical: #d12b2b;
+
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1013;
+    --surface: #15181c;
+    --surface-2: #1c2025;
+    --border: #2a2f36;
+    --text: #e8eaed;
+    --text-2: #a0a7b0;
+    --text-3: #727a85;
+    --accent: #5b9bff;
+    --accent-contrast: #0b1220;
+    --focus: #5b9bff;
+    --cat-road: #e09a2b;
+    --sev-moderate: #e0b41f;
+  }
+}

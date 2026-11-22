@@ -16,7 +16,7 @@ class OverpassAdapter:
     name = "OpenStreetMap (Overpass)"
     is_simulated = False
 
-    def __init__(self, url: str = URL, timeout: float = 15.0, client: httpx.Client | None = None):
+    def __init__(self, url: str = URL, timeout: float = 6.0, client: httpx.Client | None = None):
         self.url, self.timeout, self._client = url, timeout, client
 
     @staticmethod
