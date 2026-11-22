@@ -1,387 +1,204 @@
-# NAMMAPULSE — MASTER DEVELOPMENT PROMPT (v2, with UI/UX Direction)
+# NAMMAPULSE — MASTER DEVELOPMENT PROMPT (v3)
 
-You are a principal software architect, senior full-stack engineer, AI agent engineer and product designer.
-
-Your task is to build **NammaPulse**, an Agentic Urban Infrastructure Intelligence Platform, initially targeting Bengaluru, India.
-
-Do not build a conventional civic complaint application. Build a proactive, AI-powered platform that monitors infrastructure problems around users' frequently travelled routes and registered locations, investigates potential disruptions, and notifies users before they are affected.
+You are a senior full-stack engineer, AI agent engineer and product designer working on **NammaPulse**, an agentic urban infrastructure monitoring platform, starting with Bengaluru, India.
 
 > **Tagline:** Your City, Watching Out for You.
 
----
-
-## 0. HOW TO WORK (READ FIRST)
-
-1. **Inspect the repository first.** Understand the current architecture, existing functionality and conventions. If the repository is empty, say so and treat it as a greenfield build.
-2. **Produce a technical implementation plan** before writing code: module boundaries, API contracts, database schemas, external API dependencies, and which features require simulated data.
-3. **Wait for approval** before making large architectural changes.
-4. **Implement incrementally**, in small reviewable vertical slices. Each slice must run, be testable and be demonstrable.
-5. Keep a short `DECISIONS.md` recording architectural choices and trade-offs.
-
-**Do not:**
-
-- Generate the entire application in one giant code dump.
-- Hardcode Bengaluru-specific coordinates, names or thresholds throughout the codebase. Use a reusable **city configuration** so the platform can expand to other cities.
-- Fabricate real-time incidents or present simulated data as real.
-- Couple the system to one LLM provider. Put the LLM behind a provider-agnostic interface.
-- Create unnecessary microservices. Prefer a modular monolith plus one Python agent service.
-- Build autonomous agents that take irreversible actions without user approval.
+This is **not** a civic complaint app. Users register their home, office and regular routes. Three AI agents watch the areas around them in the background and send an alert **before** the user is affected. Users should not have to go looking for problems.
 
 ---
 
-## 1. PRODUCT VISION
+## 0. TEAM SETUP — ONE PERSON, ONE AGENT
 
-NammaPulse is a **personal urban infrastructure monitoring assistant**.
+Three people, one agent each. Everyone works in their own folder and does not edit another person's folder without asking.
 
-Users register:
+| Owner | Agent | Owns (vertical slice) |
+|---|---|---|
+| Member A | **FloodLens** | `agents/floodlens/`, flood adapters, flood DB tables, flood API routes, flood map layer + alert copy |
+| Member B | **RoadTrust** | `agents/roadtrust/`, YOLO pipeline, road adapters, road DB tables, road API routes, road map layer + alert copy |
+| Member C | **WaterWatch** | `agents/waterwatch/`, sensor/tanker adapters, water DB tables, water API routes, water panel + alert copy |
 
-- Their home location.
-- Their office or workplace.
-- Their frequently travelled routes.
-- Other important locations they want monitored.
+**Shared code** (`packages/contracts`, `apps/web/src/design`, `apps/api/src/core`, orchestrator, notification engine) is built together in **Phase 0** and then changes only through a small PR that the other two approve.
 
-The platform continuously monitors the relevant geographical areas using three specialised AI agents:
+**Phase 0 — build together first (about 1–2 days):**
+1. Freeze the **agent contract** (Section 7), the **city config** format, and the shared DB base tables (users, locations, routes, incidents, notifications).
+2. Build the **design tokens + app shell** (Section 5) so everyone's UI looks like one product.
+3. Ship a **mock agent** that returns a valid response end to end: route → orchestrator → alert → map. Each person then replaces the mock with their real agent.
 
-1. **FloodLens** — flood and waterlogging intelligence.
-2. **RoadTrust** — road damage and road infrastructure intelligence.
-3. **WaterWatch** — water supply and shortage intelligence.
+**Phase 1 — parallel, each person on their own agent:** real data adapters, scoring, tests, UI panel. Every agent must also work with its **mock adapter** so nobody is blocked by another person's work or by a flaky API.
 
-When an issue is detected near a user's monitored routes or locations, the system evaluates its **severity, confidence and relevance**, then proactively notifies the user.
+**Phase 2 — integrate:** orchestrator dedup/prioritisation, notification engine, full demo scenario.
 
-**Core philosophy:** Users should not have to open the app and search for problems. NammaPulse watches out for them.
-
----
-
-## 2. THE THREE SPECIALISED AGENTS
-
-### Agent 1 — FloodLens
-
-**Purpose:** Detect and predict flooding and waterlogging that could affect users' everyday routes.
-
-**Responsibilities**
-
-- Integrate weather forecast APIs.
-- Monitor rainfall intensity and accumulated rainfall.
-- Collect historical flood and waterlogging incidents.
-- Analyse elevation and terrain.
-- Identify flood-prone road segments.
-- Monitor newly reported waterlogging incidents.
-- Calculate location-specific flood-risk scores (deterministically).
-- Determine whether an affected road segment intersects monitored routes.
-- Generate evidence-backed flood alerts.
-
-**Data sources:** Open-Meteo weather APIs, OpenStreetMap, public elevation datasets, historical incident datasets, user-generated reports.
-
-> **Important:** Never claim rainfall alone predicts flooding. Always distinguish **forecasts**, **observed incidents** and **model-derived risk estimates**.
-
-### Agent 2 — RoadTrust
-
-**Purpose:** Monitor road infrastructure and identify hazards affecting users.
-
-**Responsibilities**
-
-- Accept geotagged road-damage reports and uploaded photographs.
-- Detect potholes using computer vision (YOLO or an appropriate model).
-- Classify road-damage severity.
-- Extract and validate GPS coordinates (EXIF and client-supplied).
-- Detect duplicate reports.
-- Monitor construction and road closures where reliable data is available.
-- Maintain road-incident history and track repair status.
-- Determine whether an incident affects a monitored route.
-
-**Data sources:** OpenStreetMap, user-submitted photographs, public road-incident datasets, community reports, public construction/closure information where available.
-
-> **Important:** Do not fabricate repair status. Do not claim an incident is independently verified when it is only user-reported.
-
-### Agent 3 — WaterWatch
-
-**Purpose:** Monitor water availability and disruptions affecting users' registered residential and commercial locations.
-
-**Responsibilities**
-
-- Monitor local water-supply disruption reports.
-- Track tanker availability and delivery information.
-- Detect reported shortages.
-- Monitor apartment-level consumption where sensor integration exists.
-- Support IoT sensor telemetry (ESP32-based sensors where available).
-- Detect abnormal water consumption.
-- Forecast water requirements.
-- Generate location-specific water-disruption alerts.
-
-**Data sources:** Public water-supply announcements, community reports, tanker information, simulated IoT data for demonstrations, ESP32 integrations.
-
-> **Important:** Keep city-level supply monitoring separate from apartment-level sensor monitoring. Never imply access to private apartment water systems without an explicit integration.
+**Working rules**
+- Inspect the repo first. If it is empty, say so and plan from scratch. Post a short plan and wait for approval before big architectural changes.
+- Small PRs, one concern each. Branch per agent: `floodlens/*`, `roadtrust/*`, `waterwatch/*`.
+- Do not hardcode Bengaluru coordinates or thresholds in code. Use a city config.
+- Do not fabricate real incidents or pass off simulated data as real. Mock data is always flagged.
+- Do not tie the project to one LLM provider. Put it behind a small interface.
+- No extra microservices. One Node API, one Python agent service, Postgres, Redis.
+- Agents never take irreversible actions without user approval.
 
 ---
 
-## 3. CENTRAL AGENT ORCHESTRATOR
+## 1. THE THREE AGENTS
 
-Build a central orchestration service coordinating the three agents.
+### FloodLens — flooding and waterlogging
+- Pull forecasts and rainfall (Open-Meteo), terrain/elevation, OpenStreetMap roads, historical waterlogging incidents and user reports.
+- Compute a **deterministic** flood-risk score per road segment. The LLM never invents scores.
+- Check whether risky segments intersect a user's route corridor.
+- Rainfall alone does not predict flooding. Always label each finding as a **forecast**, an **observed incident** or a **model estimate**.
 
-**Responsibilities**
+### RoadTrust — road damage and closures
+- Accept geotagged photos and reports. Detect potholes with YOLO (or similar), classify severity, validate GPS, detect duplicates.
+- Track incident history and repair status. Include closures/construction only from reliable public data.
+- Never invent repair status. A user report is "reported", not "verified".
 
-1. Receive monitored locations and routes.
-2. Determine which regions need monitoring.
-3. Dispatch queries to FloodLens, RoadTrust and WaterWatch.
-4. Collect agent responses.
-5. Normalise incident information.
-6. Evaluate geographical relevance and severity.
-7. Detect duplicate or overlapping alerts.
-8. Prioritise important incidents.
-9. Send relevant notifications.
-10. Maintain an **auditable record** of agent decisions.
-
-**Rules**
-
-- Use **LangGraph** or an equivalent graph-based orchestration framework.
-- The central LLM must **not** invent risk scores. Use deterministic calculations and specialised models for domain analysis; use the LLM only for explanation, summarisation and tool routing.
-- Agents expose **structured tools** with well-defined input/output schemas.
+### WaterWatch — water supply
+- Monitor supply disruption reports, tanker info, shortages. Support IoT/ESP32 telemetry, anomaly detection and demand forecasting.
+- Watches **registered homes/properties**, not commute routes.
+- Keep city-level supply news separate from apartment-level sensors. Never imply access to a private water system without an explicit integration. Simulated sensor data is labelled as simulated.
 
 ---
 
-## 4. PERSONALISED ROUTE MONITORING (CORE FEATURE)
+## 2. ORCHESTRATOR
 
-Users must be able to:
+Graph-based (LangGraph or equivalent). It: receives monitored places and routes → decides which regions to check → dispatches to the three agents → collects and validates responses → normalises incidents → checks geographic relevance and severity → removes duplicates → prioritises → hands off to notifications → writes an **audit log** of every decision.
 
-- Register home and office locations.
-- Add frequently travelled routes.
-- Select important places to monitor.
-- Choose monitoring preferences.
-- Enable or disable individual alert categories.
-
-For MVP, users configure routes and locations manually.
-
-Implement a **route monitoring service** that:
-
-1. Retrieves or calculates route geometry.
-2. Converts it into geographic road segments.
-3. Creates a configurable **monitoring corridor** around the route.
-4. Identifies incidents intersecting that corridor.
-5. Evaluates whether incidents are relevant.
-6. Sends notifications when meaningful changes occur.
-
-Use **PostGIS** for geospatial queries. Do not send alerts merely because an incident is somewhere in the same city — geographic proximity and actual route impact matter.
-
-Support location monitoring independently of route monitoring. WaterWatch primarily monitors registered residential/property locations, not commute routes.
+Agents expose tools with clear input/output schemas. The LLM is for explanation and routing only, never for risk numbers.
 
 ---
 
-## 5. NOTIFICATION INTELLIGENCE
+## 3. ROUTE MONITORING
 
-Deliver relevant alerts without overwhelming users.
+Users add home, office, saved places and regular routes (manual setup for MVP), and can switch each alert category on or off.
 
-**Every alert contains:** incident category, incident location, distance from monitored location/route, severity, confidence or verification status, supporting evidence, timestamp, recommended action, source attribution.
-
-**Implement:** duplicate-alert suppression, severity-based prioritisation, configurable notification preferences (including quiet hours), incident expiry, alert history, and push notifications via **Firebase Cloud Messaging**.
-
-**Example copy**
-
-- **FLOOD ALERT:** Heavy rainfall is forecast near a road segment on your usual commute. Historical incidents indicate possible waterlogging.
-- **ROAD ALERT:** A newly reported pothole has been detected along your frequently travelled route.
-- **WATER ALERT:** A water supply disruption has been reported in your registered residential area.
-
-**Every alert must clearly distinguish between:**
-
-| Basis | Meaning |
-|---|---|
-| **Confirmed observation** | Directly measured or officially confirmed |
-| **Public / community report** | Reported by users or public sources, not independently verified |
-| **Prediction / model estimate** | Forecast or derived risk estimate |
+The route service gets or calculates route geometry → splits it into road segments → builds a configurable **monitoring corridor** → finds incidents inside it (PostGIS) → judges relevance → alerts on meaningful change. An incident somewhere in the same city is **not** a reason to alert. Location monitoring works independently of route monitoring.
 
 ---
 
-## 6. UI / UX DIRECTION (NEW — FOLLOW CLOSELY)
+## 4. NOTIFICATIONS
 
-### 6.1 Design principles
+Every alert has: category, location, distance from the route/place, severity, verification status, evidence, timestamp, recommended action, source.
 
-1. **Calm, not alarmist.** NammaPulse is a quiet guardian. Reserve strong colour and motion for genuinely severe alerts.
-2. **Map-centric.** The map is the hero; everything else supports it.
-3. **Glanceable first, detail on demand.** A user should understand "am I affected today?" within 3 seconds of opening the app.
-4. **Honesty is visible.** Every incident shows its basis (confirmed / reported / predicted), its source and its confidence. Simulated data is always labelled.
-5. **Background-first.** The UI must keep communicating that monitoring is happening even when nothing is wrong.
-6. **Mobile-first, desktop-excellent.** Most users will open this from a notification on a phone.
+Required: duplicate suppression, severity prioritisation, user preferences and quiet hours, incident expiry, alert history, push via Firebase Cloud Messaging.
 
-### 6.2 Visual language
+Each alert must say which of these it is: **Confirmed observation**, **Public/community report**, or **Prediction**.
 
-- **Style:** modern urban-tech SaaS; clean, premium, generous whitespace, soft shadows, 12–16px radii, subtle 1px borders. No visual clutter, no gratuitous gradients.
-- **Theme:** light and dark themes, following system preference, with a manual toggle. Both must meet WCAG AA contrast.
-- **Typography:** Inter (or Geist) for UI; a tabular/mono face for numbers, coordinates and timestamps. Type scale 12/14/16/20/24/32. Maintain consistent line-heights and spacing on a 4px grid.
-- **Colour tokens (define as CSS variables / Tailwind theme, never hardcode hex in components):**
-  - Brand: deep indigo/teal primary with one warm accent.
-  - Category colours: **Flood = blue**, **Road = amber/orange**, **Water = cyan/teal** (distinct from flood blue — also differentiate by icon and shape, never colour alone).
-  - Severity scale: **Info (neutral) → Low (green) → Moderate (yellow) → High (orange) → Critical (red)**.
-  - Verification states: **Confirmed** (solid check badge), **Reported** (outlined badge), **Predicted** (dashed outline + sparkle/forecast icon), **Simulated** (hatched "DEMO" badge).
-- **Iconography:** one consistent icon set (Lucide). Category icons: droplets/waves (flood), road/cone (road), faucet/tank (water).
-- **Motion:** 150–250ms ease-out transitions; a gentle "pulse" ring on the status indicator while agents are investigating; honour `prefers-reduced-motion`.
-
-### 6.3 Core components (build a small design system first)
-
-- `StatusPulse` — live "Watching" indicator with last-checked timestamp.
-- `SeverityBadge`, `VerificationBadge`, `CategoryChip`, `SourceChip`.
-- `AlertCard` — category icon, headline, location + distance, severity, verification badge, relative time, recommended action, "View on map" CTA, expandable evidence.
-- `IncidentMarker` — shape + colour + icon per category and severity; clustered at low zoom.
-- `RouteLayer` — route polyline with a translucent monitoring-corridor buffer; affected segments highlighted.
-- `AgentCard` — agent name, state (idle / investigating / degraded), last run, sources consulted, findings count.
-- `EmptyState` — reassuring ("All clear on your routes. We checked 4 minutes ago.").
-- `Skeleton` loaders everywhere; never a blank screen or bare spinner.
-
-### 6.4 Navigation and layout
-
-- **Mobile:** bottom tab bar — **Home · Map · Alerts · Places · More** (Agents and Settings under More).
-- **Desktop:** left sidebar navigation, a main content area and a collapsible right-hand detail panel. The map may go full-bleed with floating panels.
-- **Top bar:** city selector (from city config), global `StatusPulse`, notification bell with unread count, theme toggle, profile menu.
-- Deep links from push notifications must open straight to the **Map** with the relevant incident focused and its detail sheet open (`/map?incident=<id>`).
-
-### 6.5 Screen specifications
-
-**1. Dashboard ("Today")**
-- Hero summary card: *"You're clear for today"* / *"2 things may affect your commute"* with a one-line reason and the `StatusPulse`.
-- **Commute strip:** home → office route with per-category status chips (Flood / Road) and expected impact.
-- **Home strip:** WaterWatch status for registered residential location.
-- Recent alerts (max 5) as `AlertCard`s, plus "Incidents near you" mini-map.
-- Footer line: "Monitoring in the background · 3 agents active · last cycle 2 min ago".
-
-**2. Interactive Map**
-- Leaflet + OpenStreetMap tiles; clustered incident markers; route polylines with corridor buffers.
-- Floating filter bar: category toggles, severity filter, verification-basis filter, time window (now / 24h / 7d), "show only my routes".
-- Tapping a marker opens a **bottom sheet (mobile) / side panel (desktop)** with incident detail, evidence (photos, rainfall data, sensor charts), source attribution, confidence, and recommended action.
-- Legend and layer control; "locate me" only with explicit permission.
-- Predicted flood-risk zones render as translucent hatched polygons, visually distinct from observed incidents.
-
-**3. My Locations**
-- Cards for Home, Office, Saved places; routes listed with mini map previews.
-- **Add-route flow (stepper):** pick origin → pick destination (search + tap on map) → preview route and corridor width slider → choose categories to monitor → set schedule (e.g. weekdays 8–10am) → confirm.
-- Per-location/route toggles for each agent; edit and delete with confirmation.
-
-**4. Alerts**
-- Tabs: **Active · History**. Filters by category, severity, basis.
-- Grouped by day; swipe to dismiss/snooze on mobile.
-- Alert detail page: timeline of how the alert evolved (detected → corroborated → escalated → expired/resolved), evidence, sources, and the agent reasoning summary ("Why am I seeing this?").
-
-**5. Agent Intelligence**
-- One card per agent with live state, last run, data sources consulted (with health: OK / degraded / using mock data), recent investigations and findings.
-- **Investigation log:** expandable, human-readable audit trail of what each agent checked and decided. Explainable, no raw JSON dumps by default (offer "view raw").
-- Clear "Using demo data" banner whenever a mock adapter is active.
-
-**6. Settings**
-- Monitoring preferences (corridor width, check frequency), per-category alert toggles and minimum severity.
-- Notification preferences: channels, quiet hours, digest vs real-time.
-- Location permission controls, privacy settings (data retention, export, delete account), data-source transparency.
-
-### 6.6 States, accessibility and responsiveness
-
-- Design every screen for **loading, empty, error, offline and degraded-provider** states.
-- WCAG 2.2 AA: keyboard navigable, visible focus rings, ARIA labels on map controls, minimum 44px touch targets, screen-reader-friendly alert announcements, colour never the only signal.
-- Breakpoints: 360 / 768 / 1024 / 1440. Test at 360px width. No horizontal scrolling.
-- Performance: route-level code splitting, lazy-load the map, virtualised long lists, marker clustering; target LCP < 2.5s on mid-range mobile.
-- PWA: installable, offline shell, service worker handling FCM web push.
-- Microcopy: plain, specific, human ("Heavy rain is forecast near Silk Board junction between 5–8pm"), never jargon like "risk vector".
-
-### 6.7 UI deliverables for the first slice
-
-Before building screens, deliver: (a) the design tokens file, (b) the component library with a Storybook-style preview page, (c) the app shell with navigation, (d) the Dashboard and Map screens wired to mock data. Share these for review before building the remaining screens.
+Copy is plain and specific. Example: *"Heavy rain forecast 5–8 pm near Silk Board junction. This stretch has flooded before. Your 8:30 commute may be affected."* Not: *"Risk vector elevated."*
 
 ---
 
-## 7. TECHNOLOGY STACK
+## 5. UI DIRECTION — CLEAN, NO AI SLOP
 
-Use the following unless the existing repository has a compelling reason to retain a different stack.
+The UI should feel like a well-made tool from a small, careful product team (think Linear, Mapbox Studio, Apple Maps). Calm, precise, quiet. It is judged by restraint.
 
-**Frontend:** React, TypeScript, Vite, Tailwind CSS, React Query, React Router, Leaflet with OpenStreetMap.
+### 5.1 Hard bans (these make it look AI-generated)
+- No purple/indigo-to-pink gradients, no glassmorphism blobs, no glowing neon, no gradient text.
+- No emoji in the UI. No sparkle/magic-wand icons for "AI". Do not label things "AI-powered" or "Smart".
+- No hero-style marketing copy inside the app. No "Welcome back, superstar!".
+- No identical rounded cards with a big icon in a coloured circle repeated six times.
+- No decorative illustrations, stock imagery, or lorem-ipsum-style filler text. Empty states use one line of text, not a cartoon.
+- No shadows stacked on shadows, no oversized radii on everything, no drop-shadowed buttons.
+- No random animation. No bouncing, shaking, confetti, or looping effects.
+- No fake data that looks real: no invented incident counts, names or "live" numbers.
 
-**Backend:** Node.js, Express, TypeScript, REST APIs, WebSockets (or SSE) for live agent/alert updates.
+### 5.2 What to do instead
+- **Flat, calm surfaces.** One neutral background, white (or near-black in dark mode) panels, 1px hairline borders, at most one subtle shadow level used only for floating map panels.
+- **One accent colour** (a restrained blue or teal) for primary actions and focus. Colour is otherwise reserved for **meaning**: category and severity only.
+- **Typography does the work.** One sans family (Inter or Geist), a tabular/mono variant for numbers, times and coordinates. Scale 12 / 14 / 16 / 20 / 28. Sentence case everywhere. Clear weight hierarchy (400/500/600); no bold-everything.
+- **Spacing:** 4px grid, consistent paddings, aligned edges. Dense where data lives (lists, tables), airy only around the primary summary.
+- **Radii:** 6–8px for controls, 10–12px for panels. Same everywhere.
+- **Icons:** one set (Lucide), 1.5px stroke, used sparingly and only when they add meaning.
+- **Information first.** Prefer a clear row of text with a small status indicator over a big card with an icon.
+- **Map is the hero.** Muted, desaturated basemap so incidents stand out. Markers are small, legible, clustered at low zoom.
 
-**AI and agents:** Python, LangGraph, OpenAI API (behind a provider-agnostic interface), YOLO for road-damage detection.
+### 5.3 Meaning through colour (and never colour alone)
+- Categories: Flood = blue, Road = amber, Water = teal. Also differ by **icon and marker shape**.
+- Severity: Info grey · Low green · Moderate yellow · High orange · Critical red. Shown as a small dot/label with text, not a whole coloured card.
+- Basis badges: **Confirmed** solid · **Reported** outlined · **Predicted** dashed outline · **Demo/Simulated** a plain "Demo data" tag.
+- Define all colours as CSS variables/Tailwind theme tokens. No raw hex in components. Light and dark themes both pass WCAG AA.
 
-**Data:** PostgreSQL + PostGIS, Redis for caching and job coordination.
+### 5.4 Navigation and screens
+- **Mobile:** bottom tabs — Today · Map · Alerts · Places · More. **Desktop:** left sidebar, main area, optional right detail panel.
+- A single small status line, "Monitoring · last check 3 min ago", is the only constant reminder that work happens in the background. It is text plus a small static dot, not a pulsing widget.
+- Push notifications deep-link to `/map?incident=<id>` with the incident focused.
 
-**Background processing:** BullMQ or AWS SQS; scheduled monitoring jobs.
+1. **Today** — one plain sentence ("Nothing affecting your routes" or "2 issues on your commute"), commute row with per-category status, home water status, last five alerts as a list.
+2. **Map** — Leaflet + OSM; route lines with a faint corridor; filters for category, severity, basis and time; tap a marker for a bottom sheet (mobile) or side panel (desktop) with evidence, source, confidence, action. Predicted flood zones are hatched polygons, visually distinct from observed incidents.
+3. **Places** — Home, Office, saved places and routes. Add-route is a simple step flow: origin → destination → preview and corridor width → categories → schedule → confirm.
+4. **Alerts** — Active / History, filterable, with a "Why am I seeing this?" explanation and a short timeline (detected → corroborated → escalated → expired).
+5. **Agents** — one plain row per agent: state, last run, sources used and their health. Readable investigation log, "view raw" optional. A visible "Using demo data" notice whenever a mock adapter is active.
+6. **Settings** — monitoring and notification preferences, quiet hours, location permission, privacy, export/delete data.
 
-**Notifications:** Firebase Cloud Messaging.
+### 5.5 Quality bar
+- Every screen has loading (skeletons), empty, error, offline and degraded-provider states.
+- Keyboard accessible, visible focus, 44px touch targets, ARIA on map controls, WCAG 2.2 AA.
+- Test at 360, 768, 1024, 1440. No horizontal scroll.
+- Lazy-load the map, code-split routes, cluster markers.
+- Installable PWA with FCM web push.
 
-**Storage:** S3-compatible object storage for incident images.
+### 5.6 Ownership of UI
+Shared tokens, shell and base components (`SeverityBadge`, `BasisBadge`, `CategoryChip`, `AlertRow`, `IncidentMarker`, `RouteLayer`) are built in Phase 0. After that each person builds **only their own agent's** UI: map layer, incident detail, alert copy, and their row on the Agents screen. Do not fork the shared components; extend them through props.
 
 ---
 
-## 8. DATABASE DESIGN
+## 6. STACK
 
-Design normalised schemas for: Users, Organizations, Locations, MonitoredRoutes, RouteSegments, InfrastructureIncidents, FloodIncidents, RoadIncidents, WaterIncidents, AgentInvestigations, AgentResults, Notifications, NotificationPreferences, SensorReadings, DataSources, IncidentEvidence.
+- **Frontend:** React, TypeScript, Vite, Tailwind, React Query, React Router, Leaflet + OSM.
+- **Backend:** Node, Express, TypeScript, REST, WebSockets/SSE for live updates.
+- **Agents:** Python, LangGraph, OpenAI API behind an interface, YOLO.
+- **Data:** PostgreSQL + PostGIS, Redis. Jobs: BullMQ or SQS. Push: FCM. Images: S3-compatible storage.
+- Keep the existing repo's stack if it has a good reason to differ.
 
-- Use PostGIS geometry/geography types for geographical entities.
-- Add GiST spatial indexes plus appropriate B-tree indexes.
-- Maintain timestamps, provenance and verification status on every incident record.
+**Database:** normalised tables for Users, Organizations, Locations, MonitoredRoutes, RouteSegments, InfrastructureIncidents, FloodIncidents, RoadIncidents, WaterIncidents, AgentInvestigations, AgentResults, Notifications, NotificationPreferences, SensorReadings, DataSources, IncidentEvidence. PostGIS geometry with GiST indexes. Timestamps, provenance and verification status on every incident.
 
 ---
 
-## 9. AGENT COMMUNICATION CONTRACT
+## 7. AGENT CONTRACT (frozen in Phase 0)
 
-Every agent returns a consistent, validated structured response. Schema example (not hardcoded data):
+Every agent returns this shape, validated with Zod (Node) and Pydantic (Python). Malformed output is rejected and logged. Values below are placeholders, not data.
 
 ```json
 {
-  "agent": "FloodLens",
-  "incident_type": "waterlogging",
+  "agent": "FloodLens | RoadTrust | WaterWatch",
+  "incident_type": "string",
   "location": { "latitude": 0.0, "longitude": 0.0 },
-  "severity": "high",
+  "severity": "info | low | moderate | high | critical",
   "confidence": 0.0,
-  "verification_status": "reported",
-  "basis": "observation | report | prediction",
+  "verification_status": "confirmed | reported | predicted",
   "affected_route": true,
   "evidence": [],
   "source": [],
   "recommended_action": "string",
-  "observed_at": "ISO-8601 timestamp",
+  "observed_at": "ISO-8601",
   "is_simulated": false
 }
 ```
 
-Validate all agent responses (Zod on the Node side, Pydantic on the Python side). Reject and log malformed output.
+Every external adapter implements the same interface, so mock and real providers swap by config. Use timeouts, retries with backoff and graceful degradation.
 
 ---
 
-## 10. FAILURE HANDLING AND MOCK DATA
-
-- The demo must work even when external providers are unavailable, using **clearly labelled mock data adapters** (`is_simulated: true`, visible "DEMO" badge in the UI).
-- Every adapter implements a common interface so mock and real providers are interchangeable via configuration.
-- Use timeouts, retries with backoff, circuit breakers and graceful degradation; surface provider health in the Agent Intelligence screen.
+## 8. SECURITY AND PRIVACY
+Home and office locations are sensitive: minimise retention, never log precise coordinates in plain logs, authenticate and validate every API, rate-limit, keep secrets in env vars, strip EXIF from public images, ask explicit consent for location and notifications, support data export and deletion.
 
 ---
 
-## 11. SECURITY AND PRIVACY
+## 9. MVP DEMO (must work even if every external API is down, using labelled mock adapters)
+1. User registers home and office.
+2. User adds a regular route.
+3. Platform starts monitoring it.
+4. FloodLens gets weather and flood info.
+5. RoadTrust gets road-damage incidents.
+6. WaterWatch checks disruptions near home.
+7. Orchestrator aggregates.
+8. Notification engine decides what is relevant.
+9. User gets a push notification.
+10. User taps it and sees the affected spot on the map.
 
-- Treat home/office locations as sensitive: encrypt at rest where practical, minimise retention, and never log precise coordinates in plain application logs.
-- Authenticated APIs, input validation, rate limiting, secrets via environment variables, image upload validation and EXIF stripping before public display.
-- Explicit consent for location access and notifications; provide data export and deletion.
+## 10. DONE MEANS
+Works end to end, not just screens. Tests for scoring, geospatial filtering, dedup and schema validation. README with setup, env vars and demo script. UI follows Section 5 and has none of the Section 5.1 bans.
 
----
-
-## 12. MVP ACCEPTANCE CRITERIA
-
-The first working demonstration must support this scenario end to end:
-
-1. A user registers their home and office.
-2. The user adds a frequently travelled route.
-3. The platform starts monitoring the route.
-4. FloodLens retrieves weather and flood-related information.
-5. RoadTrust retrieves road-damage incidents.
-6. WaterWatch monitors water disruptions near the registered home.
-7. The orchestrator aggregates the results.
-8. The notification engine decides whether an alert is relevant.
-9. The user receives a notification.
-10. The user opens the notification and sees the affected location on the map.
-
----
-
-## 13. DEFINITION OF DONE
-
-- Working end-to-end workflow, not a UI prototype.
-- Reliable ingestion, accurate geospatial filtering, modular agents, explainable intelligence, useful notifications.
-- Strong error handling, unit/integration tests for scoring, geospatial filtering, dedup and schema validation.
-- README with setup, environment variables, architecture diagram and demo script.
-- UI matches Section 6 and passes accessibility checks.
-
-**Start now by inspecting the repository, then produce the architecture and implementation plan (including the UI plan from Section 6.7). Wait for approval before large architectural changes.**
-
----
+**Start by inspecting the repo and posting a short plan covering Phase 0 and each person's slice. Wait for approval before large changes.**
 
 *NAMMAPULSE — YOUR CITY, WATCHING OUT FOR YOU.*
