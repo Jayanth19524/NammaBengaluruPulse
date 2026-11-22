@@ -1,0 +1,13 @@
+{
+  "id": "bengaluru",
+  "name": "Bengaluru",
+  "country": "IN",
+  "bbox": [77.35, 12.78, 77.85, 13.20],
+  "roadtrust": {
+    "default_corridor_m": 50,
+    "dedup_radius_m": 25,
+    "stale_after_days": 30,
+    "min_detection_confidence": 0.4,
+    "max_image_bytes": 8388608
+  }
+}

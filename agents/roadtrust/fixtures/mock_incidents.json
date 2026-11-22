@@ -1,0 +1,8 @@
+[
+  {"id": "m1", "kind": "pothole", "latitude": 12.9177, "longitude": 77.6238, "severity": "high",
+   "description": "Demo pothole near a junction", "hours_ago": 3},
+  {"id": "m2", "kind": "construction", "latitude": 12.9352, "longitude": 77.6245, "severity": "moderate",
+   "description": "Demo road works", "hours_ago": 20},
+  {"id": "m3", "kind": "pothole", "latitude": 12.9800, "longitude": 77.5900, "severity": "low",
+   "description": "Demo pothole far from the demo route", "hours_ago": 6}
+]

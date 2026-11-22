@@ -1,0 +1,148 @@
+{
+  "$defs": {
+    "Location": {
+      "properties": {
+        "latitude": {
+          "maximum": 90,
+          "minimum": -90,
+          "title": "Latitude",
+          "type": "number"
+        },
+        "longitude": {
+          "maximum": 180,
+          "minimum": -180,
+          "title": "Longitude",
+          "type": "number"
+        }
+      },
+      "required": [
+        "latitude",
+        "longitude"
+      ],
+      "title": "Location",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "agent": {
+      "enum": [
+        "FloodLens",
+        "RoadTrust",
+        "WaterWatch"
+      ],
+      "title": "Agent",
+      "type": "string"
+    },
+    "incident_id": {
+      "title": "Incident Id",
+      "type": "string"
+    },
+    "incident_type": {
+      "title": "Incident Type",
+      "type": "string"
+    },
+    "location": {
+      "$ref": "#/$defs/Location"
+    },
+    "severity": {
+      "enum": [
+        "info",
+        "low",
+        "moderate",
+        "high",
+        "critical"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "verification_status": {
+      "enum": [
+        "confirmed",
+        "reported",
+        "predicted"
+      ],
+      "title": "Verification Status",
+      "type": "string"
+    },
+    "affected_route": {
+      "title": "Affected Route",
+      "type": "boolean"
+    },
+    "route_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Route Id"
+    },
+    "distance_m": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Distance M"
+    },
+    "evidence": {
+      "default": [],
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "source": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Source",
+      "type": "array"
+    },
+    "recommended_action": {
+      "title": "Recommended Action",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "is_simulated": {
+      "default": false,
+      "title": "Is Simulated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "agent",
+    "incident_id",
+    "incident_type",
+    "location",
+    "severity",
+    "confidence",
+    "verification_status",
+    "affected_route",
+    "recommended_action",
+    "observed_at"
+  ],
+  "title": "AgentResponse",
+  "type": "object"
+}
